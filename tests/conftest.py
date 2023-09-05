@@ -24,7 +24,10 @@ def pytest_addoption(parser):
 
 
 def determine_scope(fixture_name, config):
+    # breakpoint()
     fixture_scope = config.getoption("--fixture_scope")
+    if fixture_scope is None:
+        fixture_scope = "session"
     if fixture_scope in [
         "function",
         "class",
@@ -71,6 +74,7 @@ def zookeeper(
     docker_client: DockerClient, network: Network, resource_postfix: str
 ) -> Container:
     logging.info(f"Pulling {ZOOKEEPER_IMAGE_NAME}")
+    # breakpoint()
     docker_client.images.get(name=ZOOKEEPER_IMAGE_NAME)
     logging.info(f"Starting container zookeeper-{resource_postfix}")
 
