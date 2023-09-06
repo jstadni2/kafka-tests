@@ -18,6 +18,13 @@ ZOOKEEPER_CLIENT_PORT = getenv("ZOOKEEPER_CLIENT_PORT")
 BROKER_PORT = getenv("BROKER_PORT")
 LOCAL_PORT = getenv("LOCAL_PORT")
 
+POSTGRES_IMAGE_NAME = getenv("POSTGRES_IMAGE_NAME")
+POSTGRES_PORT = getenv("POSTGRES_PORT")
+POSTGRES_PORT = getenv("POSTGRES_PORT")
+POSTGRES_USER = getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = getenv("POSTGRES_DB")
+
 
 def pytest_addoption(parser):
     parser.addoption("--fixture_scope")
@@ -172,3 +179,22 @@ def new_topic(kafka_admin_client: AdminClient, topic_name: str) -> NewTopic:
         topic_exists = new_topic.topic in topics.keys()
     yield new_topic
     kafka_admin_client.delete_topics(topics=[new_topic.topic])
+
+@pytest.fixture(scope=determine_scope)
+def postgres(docker_client: DockerClient, network: Network) -> Container:
+    logging.info(f"Pulling {POSTGRES_IMAGE_NAME}")
+    docker_client.images.get(name=POSTGRES_IMAGE_NAME)
+    logging.info(f"Starting container postgres-{resource_postfix}")
+
+    postgres_container = docker_client.containers.run(
+        image=POSTGRES_IMAGE_NAME,
+        ports={POSTGRES_PORT: POSTGRES_PORT},
+        network=network.name,
+        name=f"postgres-{resource_postfix}",
+        hostname="postgres",
+        environment={"POSTGRES_PORT": POSTGRES_PORT},
+        detach=True,
+    )
+    logging.info(f"Container postgres-{resource_postfix} started")
+    yield postgres_container
+    postgres_container.remove(force=True)

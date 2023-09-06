@@ -21,6 +21,7 @@ clean-docker:
 	docker system prune -f
 
 # Pulling these images actually got the test suites to work
+# TODO: Get docker-compose to work in lieu of these targets 
 
 pull-zk:
 	docker pull confluentinc/cp-zookeeper:6.2.0
