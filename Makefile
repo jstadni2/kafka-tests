@@ -1,5 +1,8 @@
-# Running tests from the command line fails, but running
-# them from VS Code passes
+CONTAINERS := $(shell docker ps -a -q)
+
+# All targets are phony
+.PHONY: *
+
 test-component:
 	pytest -m component tests/ --fixture_scope=session
 
@@ -8,6 +11,14 @@ test-integration:
 
 clean:
 	rm -rf .pytest_cache
+
+containers:
+	@echo $(CONTAINERS)
+
+# This would be safer if it cleaned specific containers and images
+clean-docker:
+	docker stop $(CONTAINERS)
+	docker system prune -f
 
 # Pulling these images actually got the test suites to work
 
