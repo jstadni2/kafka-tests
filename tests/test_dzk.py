@@ -53,3 +53,11 @@ def test_produce_consume(produced_message: Dict[str, str], new_topic: NewTopic):
     consumed_message = consumer.poll()
     assert consumed_message.value() == produced_message_bytes
     consumer.close()
+
+
+@pytest.mark.component
+def test_postgres_exists(db_connection):
+    # cluster_metadata = kafka_admin_client.list_topics()
+    # topics = cluster_metadata.topics
+    # assert new_topic.topic in topics.keys()
+    pass

@@ -10,6 +10,9 @@ from docker.client import DockerClient
 from docker.models.containers import Container
 from docker.models.networks import Network
 
+from dzk.models import get_db_engine, Base
+
+
 logger = logging.getLogger()
 
 KAFKA_IMAGE_NAME = getenv("KAFKA_IMAGE_NAME")
@@ -198,3 +201,20 @@ def postgres(docker_client: DockerClient, network: Network) -> Container:
     logging.info(f"Container postgres-{resource_postfix} started")
     yield postgres_container
     postgres_container.remove(force=True)
+
+
+test_engine = get_db_engine('test')
+
+
+@pytest.fixture(scope="function")
+def db_connection():
+    """SQLAlchemy connection for an empty database.
+
+    Yields:
+        _type_: _description_
+    """
+    Base.metadata.create_all(test_engine)
+    connection = test_engine.connect()
+    yield connection
+    connection.close()
+    Base.metadata.drop_all(bind=test_engine)
