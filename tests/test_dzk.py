@@ -7,8 +7,11 @@ from uuid import uuid4
 import pytest
 from confluent_kafka import Consumer, cimpl
 from confluent_kafka.admin import AdminClient, NewTopic  # noqa
+from sqlalchemy_utils import database_exists
 
 from dzk.producer import produce
+from dzk.models import get_db_url
+
 
 logger = logging.getLogger()
 
@@ -57,7 +60,6 @@ def test_produce_consume(produced_message: Dict[str, str], new_topic: NewTopic):
 
 @pytest.mark.component
 def test_postgres_exists(db_connection):
-    # cluster_metadata = kafka_admin_client.list_topics()
-    # topics = cluster_metadata.topics
-    # assert new_topic.topic in topics.keys()
-    pass
+    DB_HOST = getenv("DB_HOST")
+    url = get_db_url(DB_HOST)
+    assert database_exists(url)

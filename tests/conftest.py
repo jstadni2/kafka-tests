@@ -9,8 +9,9 @@ from confluent_kafka.admin import AdminClient, NewTopic  # noqa
 from docker.client import DockerClient
 from docker.models.containers import Container
 from docker.models.networks import Network
+from sqlalchemy import create_engine
 
-from dzk.models import get_db_engine, Base
+from dzk.models import get_db_url, Base
 
 
 logger = logging.getLogger()
@@ -23,10 +24,11 @@ LOCAL_PORT = getenv("LOCAL_PORT")
 
 POSTGRES_IMAGE_NAME = getenv("POSTGRES_IMAGE_NAME")
 POSTGRES_PORT = getenv("POSTGRES_PORT")
-POSTGRES_PORT = getenv("POSTGRES_PORT")
 POSTGRES_USER = getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = getenv("POSTGRES_DB")
+PGDATA = getenv("PGDATA")
+DB_HOST = getenv("DB_HOST")
 
 
 def pytest_addoption(parser):
@@ -183,36 +185,52 @@ def new_topic(kafka_admin_client: AdminClient, topic_name: str) -> NewTopic:
     yield new_topic
     kafka_admin_client.delete_topics(topics=[new_topic.topic])
 
+
 @pytest.fixture(scope=determine_scope)
-def postgres(docker_client: DockerClient, network: Network) -> Container:
+def postgres_service_name(resource_postfix: str):
+    return f"postgres-{resource_postfix}"
+
+
+@pytest.fixture(scope=determine_scope)
+def postgres(
+    docker_client: DockerClient,
+    network: Network,
+    postgres_service_name: str
+    )-> Container:
     logging.info(f"Pulling {POSTGRES_IMAGE_NAME}")
     docker_client.images.get(name=POSTGRES_IMAGE_NAME)
-    logging.info(f"Starting container postgres-{resource_postfix}")
+    logging.info(f"Starting container {postgres_service_name}")
 
     postgres_container = docker_client.containers.run(
         image=POSTGRES_IMAGE_NAME,
-        ports={POSTGRES_PORT: POSTGRES_PORT},
+        ports={f"{POSTGRES_PORT}": f"{POSTGRES_PORT}"},
         network=network.name,
-        name=f"postgres-{resource_postfix}",
-        hostname="postgres",
-        environment={"POSTGRES_PORT": POSTGRES_PORT},
+        name=postgres_service_name,
+        hostname=postgres_service_name,  # use this?
+        environment={"POSTGRES_PORT": POSTGRES_PORT,
+                     "POSTGRES_USER": POSTGRES_USER,
+                     "POSTGRES_PASSWORD": POSTGRES_PASSWORD,
+                     "POSTGRES_DB": POSTGRES_DB,
+                    # "PGDATA": "/var/lib/postgresql/data/pgdata",
+                    },
         detach=True,
     )
-    logging.info(f"Container postgres-{resource_postfix} started")
+    sleep(1)
+    logging.info(f"Container {postgres_service_name} started")
+    
     yield postgres_container
     postgres_container.remove(force=True)
 
 
-test_engine = get_db_engine('test')
-
-
 @pytest.fixture(scope="function")
-def db_connection():
+def db_connection(postgres, postgres_service_name):
     """SQLAlchemy connection for an empty database.
 
     Yields:
         _type_: _description_
     """
+    # TODO: successfully call get_db_url on network/container
+    test_engine = create_engine(get_db_url(DB_HOST))
     Base.metadata.create_all(test_engine)
     connection = test_engine.connect()
     yield connection
