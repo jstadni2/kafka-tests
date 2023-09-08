@@ -10,6 +10,7 @@ from docker.client import DockerClient
 from docker.models.containers import Container
 from docker.models.networks import Network
 from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 from dzk.models import get_db_url, Base
 
@@ -235,4 +236,21 @@ def db_connection(postgres, postgres_service_name):
     connection = test_engine.connect()
     yield connection
     connection.close()
+    Base.metadata.drop_all(bind=test_engine)
+
+
+@pytest.fixture(scope="function")
+def db_session(postgres, postgres_service_name):
+    """SQLAlchemy connection for an empty database.
+
+    Yields:
+        _type_: _description_
+    """
+    # TODO: successfully call get_db_url on network/container
+    test_engine = create_engine(get_db_url(DB_HOST))
+    Base.metadata.create_all(test_engine)
+    Session = scoped_session(sessionmaker(bind=test_engine))
+    session = Session()
+    yield session
+    session.close()
     Base.metadata.drop_all(bind=test_engine)

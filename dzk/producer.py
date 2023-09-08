@@ -1,7 +1,21 @@
+import json
 import logging
 from typing import Dict
 
 from confluent_kafka import Producer
+
+
+
+def message_value_deserializer(value):
+    return json.loads(value.decode('utf-8'))
+
+
+def transform_message_value(value):
+    transformed_value = {
+        # 'id': value['id'][:8],
+        'value': value['id'][9:]
+    }
+    return transformed_value
 
 
 def produce(broker_conf: Dict[str, str], topic: str, message: bytes):
