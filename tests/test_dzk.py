@@ -67,6 +67,8 @@ def test_postgres_exists(db_connection):
 
 # Integration test
 # Expected output from db should be transformed value
+# This spins up containers for each iteration (currently 1)
+# Create fixture for batch of fake data
 @pytest.mark.parametrize(
     "produced_message", [{"id": str(uuid4())} for _ in range(1)]
 )
